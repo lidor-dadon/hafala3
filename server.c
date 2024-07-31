@@ -1,7 +1,9 @@
 #include "segel.h"
 #include "request.h"
 
-#define SCHEDALG_LENGTH 7
+#include "queue.h"
+
+#define SCHEDALG_LENGTH 5
 
 // 
 // server.c: A very, very simple web server
@@ -23,7 +25,7 @@
     *port = atoi(argv[1]);
 }*/
 
-void getargs(int *port, int* threads, int* queueSize, char schedalg[], int argc, char *argv[])
+void getargs(int *port, int* threads, int* queueSize, enum Schedalg* schedalg, int argc, char *argv[])
 {
     if (argc < 5) {
         fprintf(stderr, "Usage: %s <port> <threads> <queue_size> <schedalg>\n", argv[0]);
@@ -32,12 +34,16 @@ void getargs(int *port, int* threads, int* queueSize, char schedalg[], int argc,
     *port = atoi(argv[1]);
     *threads = atoi(argv[2]);
     *queueSize = atoi(argv[3]);
-    int i = 0;
-    for(; argv[4][i] && i<SCHEDALG_LENGTH -1; i++){
-        schedalg[i] = argv[4][i];
+    *schedalg = NOT_DEFINED;
+    for(int i = 0; i<SCHEDALG_LENGTH; i++){
+        if(strcmp(argv[4], schedalgArr[i])){
+            *schedalg = i;
+        }
     }
-    schedalg[i] = '\0';
-    //if(strcmp(schedalg, ""))
+    if (*schedalg == NOT_DEFINED){
+        fprintf(stderr, "<schedalg> must be\n", argv[0]); //TODO:find what to print
+        exit(1);
+    }
 }
 
 

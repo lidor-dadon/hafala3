@@ -5,7 +5,7 @@
 #ifndef HAFALA3C_QUEUE_H
 #define HAFALA3C_QUEUE_H
 
-enum Schedalg {BLOCK, DT, DH, BF, RANDOM};
+enum Schedalg {BLOCK = 0, DT = 1, DH = 2, BF = 3, RANDOM = 4, NOT_DEFINED};
 char* schedalgArr[] = {"block", "dt", "dh", "bf", "random"};
 
 typedef struct myRequest{
