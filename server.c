@@ -4,6 +4,8 @@
 #include "queue.h"
 
 #define SCHEDALG_LENGTH 5
+enum Schedalg {BLOCK = 0, DT = 1, DH = 2, BF = 3, RANDOM = 4, NOT_DEFINED};
+char* schedalgArr[] = {"block", "dt", "dh", "bf", "random"};
 
 // 
 // server.c: A very, very simple web server
