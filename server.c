@@ -27,6 +27,8 @@ char* schedalgArr[] = {"block", "dt", "dh", "bf", "random"};
     *port = atoi(argv[1]);
 }*/
 
+
+
 void getargs(int *port, int* threads, int* queueSize, enum Schedalg* schedalg, int argc, char *argv[])
 {
     if (argc < 5) {
@@ -48,6 +50,9 @@ void getargs(int *port, int* threads, int* queueSize, enum Schedalg* schedalg, i
     }
 }
 
+void * tread_main(void*){
+
+}
 
 int main(int argc, char *argv[])
 {
@@ -55,20 +60,42 @@ int main(int argc, char *argv[])
     struct sockaddr_in clientaddr;
 
     int threads, queueSize;
-    char schedalg[SCHEDALG_LENGTH];
+    enum Schedalg* schedalg;
 
     getargs(&port, &threads, &queueSize, schedalg, argc, argv);
 
     // 
     // HW3: Create some threads...
     //
+    //allocate array of int/struct for passing information to the treads
+    pthread_t threadsArr[threads];
+    for ( int i=0; i<threads; i++) {
+        pthread_create(&threadsArr[i], NULL, tread_main, NULL);
+    }
 
+    myRequest* request = (myRequest*) malloc(sizeof (myRequest));
+    if(request == NULL){
+        fprintf(stderr, "Allocation error\n", argv[0]); //TODO:find what to print
+        exit(1);
+    }
     listenfd = Open_listenfd(port);
+    pthread_mutex_t m;
+    pthread_mutex_init(&m,NULL);
+    pthread_cond_t queueNotEmpty;
+    pthread_cond_t queueNotFull;
+    pthread_cond_init(&queueNotEmpty,NULL);
+    pthread_cond_init(&queueNotFull,NULL);
+
+
     while (1) {
 	clientlen = sizeof(clientaddr);
 	connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
+    request->fd = connfd;
+    gettimeofday(&request->arrivalTime, NULL);
+    //push(waitQueue,request);
 
-	// 
+
+    //
 	// HW3: In general, don't handle the request in the main thread.
 	// Save the relevant info in a buffer and have one of the worker threads 
 	// do the work. 
@@ -77,9 +104,7 @@ int main(int argc, char *argv[])
 
 	Close(connfd);
     }
-
 }
-
 
     
 

@@ -19,7 +19,7 @@ requestNode* initRequestNode(myRequest* request) {
         newNode->prev = NULL;
         newNode->myRequest = newRequest;
         newNode->myRequest->fd = request->fd;
-        newNode->myRequest->arrivalTime = request->arrivalTime;
+        newNode->myRequest->arrivalTime = request->arrivalTime;//problem
     }
     return newNode;
 }
