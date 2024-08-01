@@ -13,6 +13,7 @@ requestQueue* initRequestQueue(int maxSize) {
 
 requestNode* initRequestNode(myRequest* request) {
     requestNode* newNode = (requestNode*)malloc(sizeof(requestNode));
+    requestNode* newRequest = (requestNode*)malloc(sizeof(requestNode));
     if (newNode != NULL) {
         newNode->next = NULL;
         newNode->prev = NULL;
@@ -50,14 +51,14 @@ myRequest * popHead(requestQueue* queue) {
     if (queue == NULL || queue->head == NULL)
         return NULL;
     requestNode* headQueue = queue->head;
+    myRequest * request = queue->head->myRequest;
     queue->head = queue->head->next;
     if (queue->head != NULL) {
         queue->head->prev = NULL;
     }
+    free(headQueue);
     queue->size--;
-    headQueue->next = NULL;
-    headQueue->prev = NULL;
-    return headQueue->myRequest;
+    return request;
 }
 
 myRequest * popFromIndex(requestQueue* queue, int index) {
@@ -67,9 +68,7 @@ myRequest * popFromIndex(requestQueue* queue, int index) {
     if(queue->head == NULL){
         return NULL;
     }
-
     requestNode* current = queue->head;
-
     for (int i = 0; i < index; i++) {
         current = current->next;
     }
@@ -82,24 +81,24 @@ myRequest * popFromIndex(requestQueue* queue, int index) {
     if(current->next != NULL) {
         current->next->prev = current->prev;
     }
-    current->next = NULL;
-    current->prev = NULL;
+    myRequest *request = current->myRequest;
+    free(current);
     queue->size--;
-    return current->myRequest;
+    return request;
 }
 
 myRequest * popTail(requestQueue* queue) {
     if (queue == NULL || queue->head == NULL)
         return NULL;
     requestNode* tailQueue = queue->tail;
+    myRequest * request = queue->tail->myRequest;
     queue->tail = queue->tail->prev;
     if (queue->tail != NULL) {
         queue->tail->next = NULL;
     }
+    free(tailQueue);
     queue->size--;
-    tailQueue->next = NULL;
-    tailQueue->prev = NULL;
-    return tailQueue->myRequest;
+    return request;
 }
 
 int getSize(requestQueue* queue) {
@@ -120,9 +119,9 @@ void deleteQueue(requestQueue* queue) {
 
     while (current != NULL) {
         next = current->next;
+        free(current->myRequest);
         free(current);
         current = next;
     }
     free(queue);
-    return;
 }

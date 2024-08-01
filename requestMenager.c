@@ -60,9 +60,5 @@ void destroyManager(requestManager* requestManager) {
     free(requestManager);
 }
 
-int main () {
-    return 0;
-}
-
 
 
