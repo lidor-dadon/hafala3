@@ -120,55 +120,55 @@ int main(int argc, char *argv[])
 	//push request to queue
 	pthread_mutex_lock(&manager->mutexLock);
 	if(manager->waitQueue->size + manager->runQueueSize >= manager->maxRequests){
-	if(schedalg == BLOCK){
-	    while(manager->waitQueue->size + manager->runQueueSize >= manager->maxRequests){
-		pthread_cond_wait(&manager->runListNotFullSignal, &manager->mutexLock);
+	    if(schedalg == BLOCK){
+	        while(manager->waitQueue->size + manager->runQueueSize >= manager->maxRequests){
+	    	    pthread_cond_wait(&manager->runListNotFullSignal, &manager->mutexLock);
+		}
 	    }
-	}
-	if(schedalg == DT){
-	    pthread_cond_signal(&manager->waitListNotEmptySignal);
-	    close(connfd);
-	    pthread_mutex_unlock(&manager->mutexLock);
-	    continue;
-	}
-	if(schedalg == DH){
-	    if(manager->waitQueue->size != 0 ) {
-		myRequest* request = popHead(manager->waitQueue);
-		Close(request->fd);
-		free(request);
+	    if(schedalg == DT){
+	        pthread_cond_signal(&manager->waitListNotEmptySignal);
+	        close(connfd);
+	        pthread_mutex_unlock(&manager->mutexLock);
+	        continue;
 	    }
-	    else{
-		close(connfd);
-		pthread_mutex_unlock(&manager->mutexLock);
-		continue;
-	    }
-	}
-	if(schedalg == BF){
-	    while((manager->waitQueue->size + manager->runQueueSize) > 0){
-		pthread_cond_wait(&manager->waitAndRunListEmptySignal, &manager->mutexLock);
-	    }
-	    close(connfd);
-	    pthread_mutex_unlock(&manager->mutexLock);
-	    continue;
-	}
-	if(schedalg == RANDOM){
-	    int index;
-	    int drop = manager->waitQueue->size/2 + manager->waitQueue->size%2;
-	    myRequest* request;
-	    if(drop != 0){
-		for(int i = 0 ; i < drop ; i++){
-		    index = rand()%(manager->waitQueue->size);
-		    request = popFromIndex(manager->waitQueue, index);
+	    if(schedalg == DH){
+	        if(manager->waitQueue->size != 0 ) {
+	    	    myRequest* request = popHead(manager->waitQueue);
 		    Close(request->fd);
 		    free(request);
 		}
+		else{
+		    close(connfd);
+		    pthread_mutex_unlock(&manager->mutexLock);
+		    continue;
+		}
 	    }
-	    else{
+	    if(schedalg == BF){
+	        while((manager->waitQueue->size + manager->runQueueSize) > 0){
+	  	    pthread_cond_wait(&manager->waitAndRunListEmptySignal, &manager->mutexLock);
+		}
 		close(connfd);
 		pthread_mutex_unlock(&manager->mutexLock);
 		continue;
 	    }
-	}
+	    if(schedalg == RANDOM){
+	        int index;
+	        int drop = manager->waitQueue->size/2 + manager->waitQueue->size%2;
+	        myRequest* request;
+	        if(drop != 0){
+		    for(int i = 0 ; i < drop ; i++){
+		        index = rand()%(manager->waitQueue->size);
+			request = popFromIndex(manager->waitQueue, index);
+			Close(request->fd);
+			free(request);
+		    }
+		}
+		else{
+		    close(connfd);
+		    pthread_mutex_unlock(&manager->mutexLock);
+	            continue;
+	        }
+	    }
 	}
 	push(manager->waitQueue,request);
 	pthread_cond_signal(&manager->waitListNotEmptySignal);
