@@ -75,9 +75,15 @@ void * tread_main(void* parameters){
 
         pthread_mutex_lock(&manager->mutexLock);
         manager->runQueueSize--;
+        if(manager->waitQueue->size == 0 && manager->runQueueSize == 0){
+            pthread_cond_signal(&manager->waitAndRunListEmptySignal);
+        }
         pthread_mutex_unlock(&manager->mutexLock);
 
+        Close(request->fd);
         free(request);
+        //sleep(20);
+
     }
 
 }
@@ -88,9 +94,9 @@ int main(int argc, char *argv[])
     struct sockaddr_in clientaddr;
 
     int threads, queueSize;
-    enum Schedalg* schedalg;
+    enum Schedalg schedalg;
 
-    getargs(&port, &threads, &queueSize, schedalg, argc, argv);
+    getargs(&port, &threads, &queueSize, &schedalg, argc, argv);
     myRequest* request = (myRequest*) malloc(sizeof (myRequest));
     if(request == NULL){
         fprintf(stderr, "Allocation error\n"); //TODO:find what to print
@@ -112,76 +118,77 @@ int main(int argc, char *argv[])
 
     listenfd = Open_listenfd(port);
     while (1) {
-	clientlen = sizeof(clientaddr);
-	connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
-	request->fd = connfd;
-	gettimeofday(&request->arrivalTime, NULL);
+        clientlen = sizeof(clientaddr);
+        connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
+        request->fd = connfd;
+        gettimeofday(&request->arrivalTime, NULL);
 
-	//push request to queue
-	pthread_mutex_lock(&manager->mutexLock);
-	if(manager->waitQueue->size + manager->runQueueSize >= manager->maxRequests){
-	    if(schedalg == BLOCK){
-	        while(manager->waitQueue->size + manager->runQueueSize >= manager->maxRequests){
-	    	    pthread_cond_wait(&manager->runListNotFullSignal, &manager->mutexLock);
-		}
-	    }
-	    if(schedalg == DT){
-	        pthread_cond_signal(&manager->waitListNotEmptySignal);
-	        close(connfd);
-	        pthread_mutex_unlock(&manager->mutexLock);
-	        continue;
-	    }
-	    if(schedalg == DH){
-	        if(manager->waitQueue->size != 0 ) {
-	    	    myRequest* request = popHead(manager->waitQueue);
-		    Close(request->fd);
-		    free(request);
-		}
-		else{
-		    close(connfd);
-		    pthread_mutex_unlock(&manager->mutexLock);
-		    continue;
-		}
-	    }
-	    if(schedalg == BF){
-	        while((manager->waitQueue->size + manager->runQueueSize) > 0){
-	  	    pthread_cond_wait(&manager->waitAndRunListEmptySignal, &manager->mutexLock);
-		}
-		close(connfd);
-		pthread_mutex_unlock(&manager->mutexLock);
-		continue;
-	    }
-	    if(schedalg == RANDOM){
-	        int index;
-	        int drop = manager->waitQueue->size/2 + manager->waitQueue->size%2;
-	        myRequest* request;
-	        if(drop != 0){
-		    for(int i = 0 ; i < drop ; i++){
-		        index = rand()%(manager->waitQueue->size);
-			request = popFromIndex(manager->waitQueue, index);
-			Close(request->fd);
-			free(request);
-		    }
-		}
-		else{
-		    close(connfd);
-		    pthread_mutex_unlock(&manager->mutexLock);
-	            continue;
-	        }
-	    }
-	}
-	push(manager->waitQueue,request);
-	pthread_cond_signal(&manager->waitListNotEmptySignal);
-	pthread_mutex_unlock(&manager->mutexLock);
+        //push request to queue
+        pthread_mutex_lock(&manager->mutexLock);
+        if(manager->waitQueue->size + manager->runQueueSize >= manager->maxRequests){
+            if(schedalg == BLOCK){
+                while(manager->waitQueue->size + manager->runQueueSize >= manager->maxRequests){
+                    pthread_cond_wait(&manager->runListNotFullSignal, &manager->mutexLock);
+                }
+            }
+            if(schedalg == DT){
+                pthread_cond_signal(&manager->waitListNotEmptySignal);
+                Close(connfd);
+                pthread_mutex_unlock(&manager->mutexLock);
+                continue;
+            }
+            if(schedalg == DH){
+                if(manager->waitQueue->size != 0 ) {
+                    myRequest* request = popHead(manager->waitQueue);
+                    Close(request->fd);
+                    free(request);
+                }
+                else{
+                    close(connfd);
+                    pthread_mutex_unlock(&manager->mutexLock);
+                    continue;
+                }
+            }
+            if(schedalg == BF){
+                while((manager->waitQueue->size + manager->runQueueSize) > 0){
+                    pthread_cond_wait(&manager->waitAndRunListEmptySignal, &manager->mutexLock);
+                }
+                close(connfd);
+                pthread_mutex_unlock(&manager->mutexLock);
+                continue;
+            }
+            if(schedalg == RANDOM){
+                int index;
+                int drop = manager->waitQueue->size/2 + manager->waitQueue->size%2;
+                myRequest* request;
+                if(drop != 0){
+                    for(int i = 0 ; i < drop ; i++){
+                        index = rand()%(manager->waitQueue->size);
+                        request = popFromIndex(manager->waitQueue, index);
+                        Close(request->fd);
+                        free(request);
+                    }
+                }
+                else{
+                    close(connfd);
+                    pthread_mutex_unlock(&manager->mutexLock);
+                    continue;
+                }
+            }
+        }
+        push(manager->waitQueue,request);
+        pthread_cond_signal(&manager->waitListNotEmptySignal);
+        pthread_mutex_unlock(&manager->mutexLock);
 
-    //
-	// HW3: In general, don't handle the request in the main thread.
-	// Save the relevant info in a buffer and have one of the worker threads 
-	// do the work. 
-	// 
-	requestHandle(connfd);
+        //
+        // HW3: In general, don't handle the request in the main thread.
+        // Save the relevant info in a buffer and have one of the worker threads
+        // do the work.
+        //
 
-	Close(connfd);
+        //requestHandle(connfd);
+
+        Close(connfd);
     }
     destroyManager(manager);
 }
