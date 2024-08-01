@@ -19,7 +19,7 @@ requestNode* initRequestNode(myRequest* request) {
         newNode->prev = NULL;
         newNode->myRequest = newRequest;
         newNode->myRequest->fd = request->fd;
-        newNode->myRequest->arrivalTime = request->arrivalTime;//problem
+        newNode->myRequest->arrivalTime = request->arrivalTime;
     }
     return newNode;
 }
@@ -43,6 +43,10 @@ void push(requestQueue* queue, myRequest* request) {
         }
         currNode->next = newNode;
         newNode->prev = currNode;
+        queue->tail = newNode;
+    }
+    if(queue->tail == NULL){
+        queue->tail = newNode;
     }
     queue->size++;
 }
@@ -56,6 +60,9 @@ myRequest * popHead(requestQueue* queue) {
     queue->head = queue->head->next;
     if (queue->head != NULL) {
         queue->head->prev = NULL;
+    }
+    if(queue->size == 1){
+        queue->tail = NULL;
     }
     free(headQueue);
     queue->size--;
@@ -82,6 +89,9 @@ myRequest * popFromIndex(requestQueue* queue, int index) {
     if(current->next != NULL) {
         current->next->prev = current->prev;
     }
+    else{
+        queue->tail = current->prev;
+    }
     myRequest *request = current->myRequest;
     free(current);
     queue->size--;
@@ -89,7 +99,7 @@ myRequest * popFromIndex(requestQueue* queue, int index) {
 }
 
 myRequest * popTail(requestQueue* queue) {
-    if (queue == NULL || queue->head == NULL)
+    if (queue == NULL || queue->tail == NULL)
         return NULL;
     requestNode* tailQueue = queue->tail;
     myRequest * request = queue->tail->myRequest;

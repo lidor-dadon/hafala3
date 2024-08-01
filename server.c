@@ -1,7 +1,6 @@
 #include "segel.h"
 #include "request.h"
 
-#include "queue.h"
 #include "requestMenager.h"
 
 #define SCHEDALG_LENGTH 5
@@ -46,12 +45,39 @@ void getargs(int *port, int* threads, int* queueSize, enum Schedalg* schedalg, i
         }
     }
     if (*schedalg == NOT_DEFINED){
-        fprintf(stderr, "<schedalg> must be\n", argv[0]); //TODO:find what to print
+        fprintf(stderr, "<schedalg> must be\n"); //TODO:find what to print
         exit(1);
     }
 }
 
-void * tread_main(void*){
+typedef struct passToThead{
+    requestManager* manager;
+    int threadId;
+} passToThead;
+
+void * tread_main(void* parameters){
+    passToThead * params = (passToThead*)parameters;
+    requestManager* manager = params->manager;
+    int threadId = params->threadId;
+    myRequest * request;
+    while(1){
+        pthread_mutex_lock(&manager->mutexLock);
+        while(manager->waitQueue->size == 0){
+            pthread_cond_wait(&manager->waitListNotEmptySignal, &manager->mutexLock);
+        }
+        request = popHead(manager->waitQueue);
+        manager->runQueueSize++;
+        pthread_cond_signal(&manager->runListNotFullSignal);
+        pthread_mutex_unlock(&manager->mutexLock);
+
+        requestHandle(request->fd);
+
+        pthread_mutex_lock(&manager->mutexLock);
+        manager->runQueueSize--;
+        pthread_mutex_unlock(&manager->mutexLock);
+
+        free(request);
+    }
 
 }
 
@@ -66,7 +92,7 @@ int main(int argc, char *argv[])
     getargs(&port, &threads, &queueSize, schedalg, argc, argv);
     myRequest* request = (myRequest*) malloc(sizeof (myRequest));
     if(request == NULL){
-        fprintf(stderr, "Allocation error\n", argv[0]); //TODO:find what to print
+        fprintf(stderr, "Allocation error\n"); //TODO:find what to print
         exit(1);
     }
     requestManager* manager = creatManager(queueSize);
@@ -75,9 +101,12 @@ int main(int argc, char *argv[])
     // HW3: Create some threads...
     //
     //allocate array of int/struct for passing information to the treads
+    passToThead* passToTheadArr = (passToThead*)malloc(threads* sizeof(passToThead));
     pthread_t threadsArr[threads];
     for ( int i=0; i<threads; i++) {
-        pthread_create(&threadsArr[i], NULL, tread_main, NULL);
+        passToTheadArr[i].manager = manager;
+        passToTheadArr[i].threadId = i;
+        pthread_create(&threadsArr[i], NULL, tread_main, (void*)(&passToTheadArr[i]));
     }
 
     listenfd = Open_listenfd(port);
@@ -89,7 +118,7 @@ int main(int argc, char *argv[])
 
     //push request to queue
     pthread_mutex_lock(&manager->mutexLock);
-    while(manager->waitQueue->size > manager->maxRequests - manager->runQueueSize){
+    while(manager->waitQueue->size >= manager->maxRequests - manager->runQueueSize){
         pthread_cond_wait(&manager->runListNotFullSignal, &manager->mutexLock);
     }
     push(manager->waitQueue,request);
