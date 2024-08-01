@@ -2,6 +2,7 @@
 #include "request.h"
 
 #include "queue.h"
+#include "requestMenager.h"
 
 #define SCHEDALG_LENGTH 5
 enum Schedalg {BLOCK = 0, DT = 1, DH = 2, BF = 3, RANDOM = 4, NOT_DEFINED};
@@ -63,6 +64,12 @@ int main(int argc, char *argv[])
     enum Schedalg* schedalg;
 
     getargs(&port, &threads, &queueSize, schedalg, argc, argv);
+    myRequest* request = (myRequest*) malloc(sizeof (myRequest));
+    if(request == NULL){
+        fprintf(stderr, "Allocation error\n", argv[0]); //TODO:find what to print
+        exit(1);
+    }
+    requestManager* manager = creatManager(queueSize);
 
     // 
     // HW3: Create some threads...
@@ -73,27 +80,21 @@ int main(int argc, char *argv[])
         pthread_create(&threadsArr[i], NULL, tread_main, NULL);
     }
 
-    myRequest* request = (myRequest*) malloc(sizeof (myRequest));
-    if(request == NULL){
-        fprintf(stderr, "Allocation error\n", argv[0]); //TODO:find what to print
-        exit(1);
-    }
     listenfd = Open_listenfd(port);
-    pthread_mutex_t m;
-    pthread_mutex_init(&m,NULL);
-    pthread_cond_t queueNotEmpty;
-    pthread_cond_t queueNotFull;
-    pthread_cond_init(&queueNotEmpty,NULL);
-    pthread_cond_init(&queueNotFull,NULL);
-
-
     while (1) {
 	clientlen = sizeof(clientaddr);
 	connfd = Accept(listenfd, (SA *)&clientaddr, (socklen_t *) &clientlen);
     request->fd = connfd;
     gettimeofday(&request->arrivalTime, NULL);
-    //push(waitQueue,request);
 
+    //push request to queue
+    pthread_mutex_lock(&manager->mutexLock);
+    while(manager->waitQueue->size > manager->maxRequests - manager->runQueueSize){
+        pthread_cond_wait(&manager->runListNotFullSignal, &manager->mutexLock);
+    }
+    push(manager->waitQueue,request);
+    pthread_cond_signal(&manager->waitListNotEmptySignal);
+    pthread_mutex_unlock(&manager->mutexLock);
 
     //
 	// HW3: In general, don't handle the request in the main thread.
