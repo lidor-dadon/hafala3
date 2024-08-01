@@ -13,10 +13,11 @@ requestQueue* initRequestQueue(int maxSize) {
 
 requestNode* initRequestNode(myRequest* request) {
     requestNode* newNode = (requestNode*)malloc(sizeof(requestNode));
-    requestNode* newRequest = (requestNode*)malloc(sizeof(requestNode));
+    myRequest* newRequest = (myRequest*)malloc(sizeof(myRequest));
     if (newNode != NULL) {
         newNode->next = NULL;
         newNode->prev = NULL;
+        newNode->myRequest = newRequest;
         newNode->myRequest->fd = request->fd;
         newNode->myRequest->arrivalTime = request->arrivalTime;
     }
