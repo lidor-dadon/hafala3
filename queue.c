@@ -11,7 +11,6 @@ requestNode* initRequestNode(myRequest* request) {
     return newNode;
 }
 
-// Function to push an element to the Queue
 void push(requestQueue* queue, myRequest* request) {
     if (queue == NULL)
         return;
@@ -34,7 +33,6 @@ void push(requestQueue* queue, myRequest* request) {
     queue->size++;
 }
 
-// Function to pop the first element from the Queue
 myRequest * popHead(requestQueue* queue) {
     if (queue == NULL || queue->head == NULL)
         return NULL;
