@@ -4,6 +4,8 @@
 typedef struct myRequest{
     int fd;
     struct timeval arrivalTime;
+    struct timeval pickUpTime;
+    struct timeval difference;
                         //use Time_GetSeconds() from output.c
 } myRequest;
 

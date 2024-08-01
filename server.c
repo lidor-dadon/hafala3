@@ -1,7 +1,6 @@
 #include "segel.h"
 #include "request.h"
 
-#include "queue.h"
 #include "requestMenager.h"
 
 #define SCHEDALG_LENGTH 5
@@ -56,17 +55,26 @@ typedef struct passToThead{
     int threadId;
 } passToThead;
 
+typedef struct Threads_stats{
+    int id;
+    int stat_req;
+    int dynm_req;
+    int total_req;
+} * threads_stats;
+
 void * tread_main(void* parameters){
     passToThead * params = (passToThead*)parameters;
     requestManager* manager = params->manager;
-    int threadId = params->threadId;
     myRequest * request;
+    struct Threads_stats stats = {params->threadId, 0 , 0, 0};
     while(1){
         pthread_mutex_lock(&manager->mutexLock);
         while(manager->waitQueue->size == 0){
             pthread_cond_wait(&manager->waitListNotEmptySignal, &manager->mutexLock);
         }
         request = popHead(manager->waitQueue);
+        gettimeofday(&request->pickUpTime, NULL);
+        timersub(&request->pickUpTime, &request->arrivalTime, &request->difference);
         manager->runQueueSize++;
         pthread_cond_signal(&manager->runListNotFullSignal);
         pthread_mutex_unlock(&manager->mutexLock);
