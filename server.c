@@ -79,7 +79,7 @@ void * tread_main(void* parameters){
         pthread_cond_signal(&manager->runListNotFullSignal);
         pthread_mutex_unlock(&manager->mutexLock);
 
-        requestHandle(request->fd);
+        requestHandle(request->fd, request->arrivalTime, request->pickUpTime, stats);
 
         pthread_mutex_lock(&manager->mutexLock);
         manager->runQueueSize--;
