@@ -1,4 +1,5 @@
 #ifndef __REQUEST_H__
+#include "requestMenager.h"
 
 typedef struct Threads_stats{
     int id;
