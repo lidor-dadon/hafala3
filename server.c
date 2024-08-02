@@ -38,7 +38,7 @@ void getargs(int *port, int* threads, int* queueSize, enum Schedalg* schedalg, i
     *queueSize = atoi(argv[3]);
     *schedalg = NOT_DEFINED;
     for(int i = 0; i<SCHEDALG_LENGTH; i++){
-        if(strcmp(argv[4], schedalgArr[i])){
+        if(strcmp(argv[4], schedalgArr[i]) == 0){
             *schedalg = i;
         }
     }
@@ -140,11 +140,11 @@ int main(int argc, char *argv[])
                 if(manager->waitQueue->size != 0 ) {
                     myRequest* myRequest = popHead(manager->waitQueue);
                     pthread_cond_signal(&manager->runListNotFullSignal);
-                    Close(request->fd);
+                    Close(myRequest->fd);
                     free(myRequest);
                 }
                 else{
-                    close(connfd);
+                    Close(connfd);
                     pthread_mutex_unlock(&manager->mutexLock);
                     continue;
                 }
@@ -153,24 +153,27 @@ int main(int argc, char *argv[])
                 while((manager->waitQueue->size + manager->runQueueSize) > 0){
                     pthread_cond_wait(&manager->waitAndRunListEmptySignal, &manager->mutexLock);
                 }
-                close(connfd);
+                Close(connfd);
                 pthread_mutex_unlock(&manager->mutexLock);
                 continue;
             }
             if(schedalg == RANDOM){
-                int index;
+                int index = 0;
                 int drop = manager->waitQueue->size/2 + manager->waitQueue->size%2;
-                myRequest* request;
+                myRequest* myRequest1 = NULL;
                 if(drop != 0){
                     for(int i = 0 ; i < drop ; i++){
                         index = rand()%(manager->waitQueue->size);
-                        request = popFromIndex(manager->waitQueue, index);
-                        Close(request->fd);
-                        free(request);
+                        myRequest1 = popFromIndex(manager->waitQueue, index);
+                        Close(myRequest1->fd);
+                        free(myRequest1);
+                    }
+                    if(manager->waitQueue->size + manager->runQueueSize + 1 < manager->maxRequests){
+                        pthread_cond_signal(&manager->runListNotFullSignal);
                     }
                 }
                 else{
-                    close(connfd);
+                    Close(connfd);
                     pthread_mutex_unlock(&manager->mutexLock);
                     continue;
                 }
