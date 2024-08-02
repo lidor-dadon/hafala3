@@ -198,6 +198,7 @@ int main(int argc, char *argv[])
 
         Close(connfd);
     }
+    free(passToThead);
     destroyManager(manager);
 }
 
