@@ -55,13 +55,6 @@ typedef struct passToThead{
     int threadId;
 } passToThead;
 
-typedef struct Threads_stats{
-    int id;
-    int stat_req;
-    int dynm_req;
-    int total_req;
-} * threads_stats;
-
 void * tread_main(void* parameters){
     passToThead * params = (passToThead*)parameters;
     requestManager* manager = params->manager;
