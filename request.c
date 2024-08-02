@@ -199,9 +199,9 @@ void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, thre
 	sscanf(buf, "%s %s %s", method, uri, version);
 
     int uri_len = strlen(uri);
-    int is_skip = strcmp(uri + uri_len - 5, ".skip");
+    int not_skip = strcmp(uri + uri_len - 5, ".skip");
     myRequest* requestInTail = NULL;
-    if(is_skip){
+    if(!not_skip){
         uri[uri_len - 5] = '\0';
         pthread_mutex_lock(&manager->mutexLock);
         while(manager->waitQueue->size == 0){
@@ -244,7 +244,7 @@ void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, thre
 		(t_stats->dynm_req)++;
 		requestServeDynamic(fd, filename, cgiargs, arrival, dispatch, t_stats);
 	}
-    if(is_skip && requestInTail != NULL){
+    if((!not_skip) && requestInTail != NULL){
         requestHandle(requestInTail->fd, requestInTail->arrivalTime, requestInTail->difference, t_stats, manager);
         pthread_mutex_lock(&manager->mutexLock);
         manager->runQueueSize--;

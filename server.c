@@ -140,10 +140,10 @@ int main(int argc, char *argv[])
             }
             if(schedalg == DH){
                 if(manager->waitQueue->size != 0 ) {
-                    myRequest* request = popHead(manager->waitQueue);
+                    myRequest* myRequest = popHead(manager->waitQueue);
                     pthread_cond_signal(&manager->runListNotFullSignal);
                     Close(request->fd);
-                    free(request);
+                    free(myRequest);
                 }
                 else{
                     close(connfd);
