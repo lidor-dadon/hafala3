@@ -55,13 +55,6 @@ typedef struct passToThead{
     int threadId;
 } passToThead;
 
-typedef struct Threads_stats{
-    int id;
-    int stat_req;
-    int dynm_req;
-    int total_req;
-} * threads_stats;
-
 void * tread_main(void* parameters){
     passToThead * params = (passToThead*)parameters;
     requestManager* manager = params->manager;
@@ -79,7 +72,7 @@ void * tread_main(void* parameters){
         pthread_cond_signal(&manager->runListNotFullSignal);
         pthread_mutex_unlock(&manager->mutexLock);
 
-        requestHandle(request->fd, request->arrivalTime, request->pickUpTime, stats, manager);
+        requestHandle(request->fd, request->arrivalTime, request->pickUpTime, &stats, manager);
 
         pthread_mutex_lock(&manager->mutexLock);
         manager->runQueueSize--;
@@ -198,7 +191,7 @@ int main(int argc, char *argv[])
 
         Close(connfd);
     }
-    free(passToThead);
+    free(passToTheadArr);
     destroyManager(manager);
 }
 

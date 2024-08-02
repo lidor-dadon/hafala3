@@ -4,6 +4,7 @@
 
 #include "segel.h"
 #include "request.h"
+
 #include "requestMenager.h"
 
 // requestError(      fd,    filename,        "404",    "Not found", "OS-HW3 Server could not find this file");
