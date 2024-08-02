@@ -72,7 +72,7 @@ void * tread_main(void* parameters){
         pthread_cond_signal(&manager->runListNotFullSignal);
         pthread_mutex_unlock(&manager->mutexLock);
 
-        requestHandle(request->fd, request->arrivalTime, request->pickUpTime, &stats, manager);
+        requestHandle(request->fd, request->arrivalTime, request->difference, &stats, manager);
 
         pthread_mutex_lock(&manager->mutexLock);
         manager->runQueueSize--;
@@ -141,6 +141,7 @@ int main(int argc, char *argv[])
             if(schedalg == DH){
                 if(manager->waitQueue->size != 0 ) {
                     myRequest* request = popHead(manager->waitQueue);
+                    pthread_cond_signal(&manager->runListNotFullSignal);
                     Close(request->fd);
                     free(request);
                 }
@@ -189,7 +190,7 @@ int main(int argc, char *argv[])
 
         //requestHandle(connfd);
 
-        Close(connfd);
+        //Close(connfd);
     }
     free(passToTheadArr);
     destroyManager(manager);
