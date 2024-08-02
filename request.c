@@ -188,6 +188,7 @@ void requestServeStatic(int fd, char *filename, int filesize, struct timeval arr
 // handle a request
 void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, threads_stats t_stats, requestManager* manager)
 {
+	(t_stats->total_req)++;
 	int is_static;
 	struct stat sbuf;
 	char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
