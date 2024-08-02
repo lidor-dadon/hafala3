@@ -5,13 +5,6 @@
 #include "segel.h"
 #include "request.h"
 
-typedef struct Threads_stats{
-	int id;
-	int stat_req;
-	int dynm_req;
-	int total_req;
-} * threads_stats;
-
 // requestError(      fd,    filename,        "404",    "Not found", "OS-HW3 Server could not find this file");
 void requestError(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg, struct timeval arrival, struct timeval dispatch, threads_stats t_stats)
 {
