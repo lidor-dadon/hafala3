@@ -4,13 +4,7 @@
 
 #include "segel.h"
 #include "request.h"
-
-typedef struct Threads_stats{
-	int id;
-	int stat_req;
-	int dynm_req;
-	int total_req;
-} * threads_stats;
+#include "requestMenager.h"
 
 // requestError(      fd,    filename,        "404",    "Not found", "OS-HW3 Server could not find this file");
 void requestError(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg, struct timeval arrival, struct timeval dispatch, threads_stats t_stats)
@@ -193,7 +187,7 @@ void requestServeStatic(int fd, char *filename, int filesize, struct timeval arr
 }
 
 // handle a request
-void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, threads_stats t_stats)
+void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, threads_stats t_stats, requestManager* manager)
 {
 	int is_static;
 	struct stat sbuf;
@@ -205,7 +199,24 @@ void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, thre
 	Rio_readlineb(&rio, buf, MAXLINE);
 	sscanf(buf, "%s %s %s", method, uri, version);
 
-	printf("%s %s %s\n", method, uri, version);
+    int uri_len = strlen(uri);
+    int is_skip = strcmp(uri + uri_len - 5, ".skip");
+    myRequest* requestInTail = NULL;
+    if(is_skip){
+        uri[uri_len - 5] = '\0';
+        pthread_mutex_lock(&manager->mutexLock);
+        while(manager->waitQueue->size == 0){
+            pthread_cond_wait(&manager->waitListNotEmptySignal, &manager->mutexLock);
+        }
+        requestInTail = popTail(manager->waitQueue);
+        gettimeofday(&requestInTail->pickUpTime, NULL);
+        timersub(&requestInTail->pickUpTime, &requestInTail->arrivalTime, &requestInTail->difference);
+        manager->runQueueSize++;
+        pthread_cond_signal(&manager->runListNotFullSignal);
+        pthread_mutex_unlock(&manager->mutexLock);
+    }
+
+   printf("%s %s %s\n", method, uri, version);
 
 	if (strcasecmp(method, "GET")) {
 		requestError(fd, method, "501", "Not Implemented", "OS-HW3 Server does not implement this method", arrival, dispatch, t_stats);
@@ -234,4 +245,18 @@ void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, thre
 		(t_stats->dynm_req)++;
 		requestServeDynamic(fd, filename, cgiargs, arrival, dispatch, t_stats);
 	}
+    if(is_skip && requestInTail != NULL){
+        requestHandle(requestInTail->fd, requestInTail->arrivalTime, requestInTail->difference, t_stats, manager);
+        pthread_mutex_lock(&manager->mutexLock);
+        manager->runQueueSize--;
+        if(manager->waitQueue->size == 0 && manager->runQueueSize == 0){
+            pthread_cond_signal(&manager->waitAndRunListEmptySignal);
+        }
+        pthread_mutex_unlock(&manager->mutexLock);
+
+        Close(requestInTail->fd);
+        free(requestInTail);
+    }
 }
+
+
