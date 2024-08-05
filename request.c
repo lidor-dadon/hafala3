@@ -205,7 +205,7 @@ void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, thre
     if(!not_skip){
         uri[uri_len - 5] = '\0';
         pthread_mutex_lock(&manager->mutexLock);
-        while(manager->waitQueue->size == 0){
+        if(manager->waitQueue->size == 0){
             pthread_cond_wait(&manager->waitListNotEmptySignal, &manager->mutexLock);
         }
         requestInTail = popTail(manager->waitQueue);

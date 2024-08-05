@@ -106,8 +106,7 @@ myRequest * popTail(requestQueue* queue) {
     queue->tail = queue->tail->prev;
     if (queue->tail != NULL) {
         queue->tail->next = NULL;
-    }
-    else {
+    } else {
         queue->head = NULL;
     }
     free(tailNode);
