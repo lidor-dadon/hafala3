@@ -101,13 +101,16 @@ myRequest * popFromIndex(requestQueue* queue, int index) {
 myRequest * popTail(requestQueue* queue) {
     if (queue == NULL || queue->tail == NULL)
         return NULL;
-    requestNode* tailQueue = queue->tail;
+    requestNode* tailNode = queue->tail;
     myRequest * request = queue->tail->myRequest;
     queue->tail = queue->tail->prev;
     if (queue->tail != NULL) {
         queue->tail->next = NULL;
     }
-    free(tailQueue);
+    else {
+        queue->head = NULL;
+    }
+    free(tailNode);
     queue->size--;
     return request;
 }

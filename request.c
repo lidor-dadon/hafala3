@@ -204,20 +204,18 @@ void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, thre
     myRequest* requestInTail = NULL;
     if(!not_skip){
         uri[uri_len - 5] = '\0';
-        pthread_mutex_lock(&(manager->mutexLock));
-        /*while(manager->waitQueue->size == 0){
-            pthread_cond_wait(&(manager->waitListNotEmptySignal), &(manager->mutexLock));
-        }*/
-        if(manager->waitQueue->size > 0){
-            requestInTail = popTail(manager->waitQueue);
-            gettimeofday(&(requestInTail->pickUpTime), NULL);
-            timersub(&(requestInTail->pickUpTime), &(requestInTail->arrivalTime), &(requestInTail->difference));
-            manager->runQueueSize++;
+        pthread_mutex_lock(&manager->mutexLock);
+        while(manager->waitQueue->size == 0){
+            pthread_cond_wait(&manager->waitListNotEmptySignal, &manager->mutexLock);
         }
-        pthread_mutex_unlock(&(manager->mutexLock));
+        requestInTail = popTail(manager->waitQueue);
+        gettimeofday(&requestInTail->pickUpTime, NULL);
+        timersub(&requestInTail->pickUpTime, &requestInTail->arrivalTime, &requestInTail->difference);
+        manager->runQueueSize++;
+        pthread_mutex_unlock(&manager->mutexLock);
     }
-    
-    printf("%s %s %s\n", method, uri, version);
+
+   printf("%s %s %s\n", method, uri, version);
 
 	if (strcasecmp(method, "GET")) {
 		requestError(fd, method, "501", "Not Implemented", "OS-HW3 Server does not implement this method", arrival, dispatch, t_stats);
@@ -226,7 +224,6 @@ void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, thre
 	requestReadhdrs(&rio);
 
 	is_static = requestParseURI(uri, filename, cgiargs);
-
 	if (stat(filename, &sbuf) < 0) {
 		requestError(fd, filename, "404", "Not found", "OS-HW3 Server could not find this file", arrival, dispatch, t_stats);
 		return;
@@ -247,15 +244,15 @@ void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, thre
 		(t_stats->dynm_req)++;
 		requestServeDynamic(fd, filename, cgiargs, arrival, dispatch, t_stats);
 	}
-    if((!not_skip) && (requestInTail != NULL)){
+    if((!not_skip) && requestInTail != NULL){
         requestHandle(requestInTail->fd, requestInTail->arrivalTime, requestInTail->difference, t_stats, manager);
-        pthread_mutex_lock(&(manager->mutexLock));
+        pthread_mutex_lock(&manager->mutexLock);
         manager->runQueueSize--;
-        pthread_cond_signal(&(manager->runListNotFullSignal));
+	pthread_cond_signal(&manager->runListNotFullSignal);
         if(manager->waitQueue->size == 0 && manager->runQueueSize == 0){
-            pthread_cond_signal(&(manager->waitAndRunListEmptySignal));
+            pthread_cond_signal(&manager->waitAndRunListEmptySignal);
         }
-        pthread_mutex_unlock(&(manager->mutexLock));
+        pthread_mutex_unlock(&manager->mutexLock);
 
         Close(requestInTail->fd);
         free(requestInTail);
