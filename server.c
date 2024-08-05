@@ -59,26 +59,23 @@ void * tread_main(void* parameters){
     myRequest * request;
     struct Threads_stats stats = {params->threadId, 0 , 0, 0};
     while(1){
-        pthread_mutex_lock(&manager->mutexLock);
+        pthread_mutex_lock(&(manager->mutexLock));
         while(manager->waitQueue->size == 0){
-            pthread_cond_wait(&manager->waitListNotEmptySignal, &manager->mutexLock);
+            pthread_cond_wait(&(manager->waitListNotEmptySignal), &(manager->mutexLock));
         }
         request = popHead(manager->waitQueue);
-        gettimeofday(&request->pickUpTime, NULL);
-        timersub(&request->pickUpTime, &request->arrivalTime, &request->difference);
+        gettimeofday(&(request->pickUpTime), NULL);
+        timersub(&(request->pickUpTime), &(request->arrivalTime), &(request->difference));
         manager->runQueueSize++;
-        pthread_cond_signal(&manager->runListNotFullSignal);
-        pthread_mutex_unlock(&manager->mutexLock);
-
+        pthread_mutex_unlock(&(manager->mutexLock));
         requestHandle(request->fd, request->arrivalTime, request->difference, &stats, manager);
-
-        pthread_mutex_lock(&manager->mutexLock);
+        pthread_mutex_lock(&(manager->mutexLock));
         manager->runQueueSize--;
+        pthread_cond_signal(&(manager->runListNotFullSignal));
         if(manager->waitQueue->size == 0 && manager->runQueueSize == 0){
-            pthread_cond_signal(&manager->waitAndRunListEmptySignal);
+            pthread_cond_signal(&(manager->waitAndRunListEmptySignal));
         }
-        pthread_mutex_unlock(&manager->mutexLock);
-
+        pthread_mutex_unlock(&(manager->mutexLock));
         Close(request->fd);
         free(request);
         //sleep(20);
@@ -127,7 +124,7 @@ int main(int argc, char *argv[])
         if(manager->waitQueue->size + manager->runQueueSize >= manager->maxRequests){
             if(schedalg == BLOCK){
                 while(manager->waitQueue->size + manager->runQueueSize >= manager->maxRequests){
-                    pthread_cond_wait(&manager->runListNotFullSignal, &manager->mutexLock);
+                    pthread_cond_wait(&(manager->runListNotFullSignal), &(manager->mutexLock));
                 }
             }
             if(schedalg == DT){
@@ -158,7 +155,7 @@ int main(int argc, char *argv[])
                 continue;
             }
             if(schedalg == RANDOM){
-                int index = 0;
+		int index = 0;
                 int drop = manager->waitQueue->size/2 + manager->waitQueue->size%2;
                 myRequest* myRequest1 = NULL;
                 if(drop != 0){

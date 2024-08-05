@@ -199,22 +199,7 @@ void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, thre
 	Rio_readlineb(&rio, buf, MAXLINE);
 	sscanf(buf, "%s %s %s", method, uri, version);
 
-    int uri_len = strlen(uri);
-    int not_skip = strcmp(uri + uri_len - 5, ".skip");
-    myRequest* requestInTail = NULL;
-    if(!not_skip){
-        uri[uri_len - 5] = '\0';
-        pthread_mutex_lock(&manager->mutexLock);
-        while(manager->waitQueue->size == 0){
-            pthread_cond_wait(&manager->waitListNotEmptySignal, &manager->mutexLock);
-        }
-        requestInTail = popTail(manager->waitQueue);
-        gettimeofday(&requestInTail->pickUpTime, NULL);
-        timersub(&requestInTail->pickUpTime, &requestInTail->arrivalTime, &requestInTail->difference);
-        manager->runQueueSize++;
-        pthread_cond_signal(&manager->runListNotFullSignal);
-        pthread_mutex_unlock(&manager->mutexLock);
-    }
+    
 
    printf("%s %s %s\n", method, uri, version);
 
@@ -225,6 +210,23 @@ void requestHandle(int fd, struct timeval arrival, struct timeval dispatch, thre
 	requestReadhdrs(&rio);
 
 	is_static = requestParseURI(uri, filename, cgiargs);
+
+	int uri_len = strlen(uri);
+	    int not_skip = strcmp(uri + uri_len - 5, ".skip");
+	    myRequest* requestInTail = NULL;
+	    if(!not_skip){
+		uri[uri_len - 5] = '\0';
+		pthread_mutex_lock(&manager->mutexLock);
+		while(manager->waitQueue->size == 0){
+		    pthread_cond_wait(&manager->waitListNotEmptySignal, &manager->mutexLock);
+		}
+		requestInTail = popTail(manager->waitQueue);
+		gettimeofday(&requestInTail->pickUpTime, NULL);
+		timersub(&requestInTail->pickUpTime, &requestInTail->arrivalTime, &requestInTail->difference);
+		manager->runQueueSize++;
+		pthread_cond_signal(&manager->runListNotFullSignal);
+		pthread_mutex_unlock(&manager->mutexLock);
+	    }
 	if (stat(filename, &sbuf) < 0) {
 		requestError(fd, filename, "404", "Not found", "OS-HW3 Server could not find this file", arrival, dispatch, t_stats);
 		return;
